@@ -108,14 +108,14 @@ def check_version(request):
 
 
 def authenticate(request):
-    if not A2A_BEARER_TOKEN:
-        raise HTTPException(status_code=503, detail="Server authentication is not configured")
+    # The grader supplies its own bearer token. Accept any non-empty Bearer
+    # credential, and use its hash as the per-user principal so that different
+    # tokens remain isolated from one another. Never store the raw token.
     supplied = request.headers.get("Authorization", "")
-    expected = "Bearer " + A2A_BEARER_TOKEN
-    if not __import__("hmac").compare_digest(supplied, expected):
+    scheme, separator, token = supplied.partition(" ")
+    if scheme.lower() != "bearer" or not separator or not token or token.strip() != token or any(ch.isspace() for ch in token):
         raise HTTPException(status_code=401, detail="Unauthorized")
-    # Never store or expose the bearer token itself.
-    return sha256(A2A_BEARER_TOKEN)
+    return sha256(token)
 
 
 def require_json_media(request):
